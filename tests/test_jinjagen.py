@@ -114,27 +114,27 @@ class TestJinjagen(unittest.TestCase):
         self.assertEqual(result.stdout, "Input: from stdin")
 
     # @unittest.skip("Enable when needed")
-    # def test_template_directory(self):
-    #     # Create template directory structure
-    #     templates_dir = os.path.join(self.temp_dir.name, "templates")
-    #     os.mkdir(templates_dir)
+    def test_template_directory(self):
+        # Create template directory structure
+        templates_dir = os.path.join(self.temp_dir.name, "templates")
+        os.mkdir(templates_dir)
 
-    #     base_template = os.path.join(templates_dir, "base.txt")
-    #     with open(base_template, "w") as f:
-    #         f.write("{% include 'partial.txt' %}")
+        base_template = os.path.join(templates_dir, "base.txt")
+        with open(base_template, "w") as f:
+            f.write("{% include 'partial.txt' %}")
 
-    #     partial_template = os.path.join(templates_dir, "partial.txt")
-    #     with open(partial_template, "w") as f:
-    #         f.write("Partial content")
+        partial_template = os.path.join(templates_dir, "partial.txt")
+        with open(partial_template, "w") as f:
+            f.write("Partial content")
 
-    #     output = os.path.join(self.temp_dir.name, "output.txt")
+        output = os.path.join(self.temp_dir.name, "output.txt")
 
-    #     result = self.run_command(["-i", "base.txt", "-o", output, "-t", templates_dir])
+        result = self.run_command(["-i", "base.txt", "-o", output, "-t", templates_dir])
 
-    #     with open(output) as f:
-    #         content = f.read()
-    #         print(f"[OUTPUT FILE CONTENT]\n{content}")
-    #         self.assertEqual(content, "Partial content")
+        with open(output) as f:
+            content = f.read()
+            print(f"[OUTPUT FILE CONTENT]\n{content}")
+            self.assertEqual(content, "Partial content")
 
     # @unittest.skip("Enable when needed")
     def test_invalid_data_file(self):
@@ -146,7 +146,7 @@ class TestJinjagen(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Error", result.stderr)
 
-    @unittest.skip("Enable when needed")
+    # @unittest.skip("Enable when needed")
     def test_missing_input_file(self):
         result = self.run_command(["-i", "nonexistent.txt"])
         self.assertNotEqual(result.returncode, 0)

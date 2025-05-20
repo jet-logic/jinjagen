@@ -1,5 +1,4 @@
 from argparse import ArgumentParser
-
 from jinja2 import Environment
 from .main import Main
 
@@ -16,7 +15,7 @@ class Generate(Main):
         argp.add_argument("--output", "-o", help="Output")
         argp.add_argument("--data", "-d", help="Data file (YAML/JSON)")
         argp.add_argument("--config", "-c")
-        # argp.add_argument("--templates", "-t")
+        argp.add_argument("--templates", "-t")
         argp.add_argument("--delimiters", "-D", help="Delimiters style")
         return super().add_arguments(argp)
 
@@ -66,14 +65,13 @@ class Generate(Main):
         if config:
             kwargs = yaml.safe_load(config)
 
-        # templates = self.templates
-        # if templates:
-        #     kwargs["loader"] = FileSystemLoader(templates)
+        templates = self.templates
+        if templates:
+            kwargs["loader"] = FileSystemLoader(templates)
 
         input = self.input
         output = self.output
 
-        # env = Environment(**kwargs)
         if input:
             if not delimiters:
                 if re.search(
@@ -91,10 +89,14 @@ class Generate(Main):
 
             # print("kwargs:", kwargs)
             # print("delimiters:", delimiters)
-            with as_source(input, "r") as r:
-                kwargs.pop("loader", None)
-                template = Template(r.read(), **kwargs)
-            # template = env.get_template(input)
+            if templates:
+                env = Environment(**kwargs)
+                template = env.get_template(input)
+            else:
+                with as_source(input, "r") as r:
+                    kwargs.pop("loader", None)
+                    template = Template(r.read(), **kwargs)
+
             out = template.render(params)
             with as_sink(output, "w") as w:
                 w.write(out)
