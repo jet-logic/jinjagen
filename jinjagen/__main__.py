@@ -113,5 +113,10 @@ def as_sink(path="-", mode="wb"):
     return stdout.buffer if "b" in mode else stdout
 
 
-if __name__ == "__main__":
+def main():
+    """CLI entry point."""
     Generate().main()
+
+
+if __name__ == "__main__":
+    main()

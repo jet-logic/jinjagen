@@ -8,7 +8,11 @@
 - **Supports JSON/YAML** data inputs for dynamic templates.
 - **Lightweight CLI** with stdin/stdout support.
 
----
+## ☕ Support
+
+If you find this project helpful, consider supporting me:
+
+## [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/B0B01E8SY7)
 
 ## Usage 🛠️
 
