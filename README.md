@@ -70,10 +70,6 @@ EMAIL="admin@example.com"
 
 ---
 
-Here's a clear and concise **Delimiters** section for your README, explaining how delimiter switching works in Jinjagen:
-
----
-
 ## Delimiters Explained 🔠
 
 Jinjagen automatically adapts Jinja2 delimiters to avoid conflicts with different file types. You can also override this behavior manually.
@@ -115,8 +111,6 @@ The delimiter system handles these cases:
    Respects language comment styles (e.g., `#` in Bash won’t break `#%` blocks).
 3. **Edge Cases**:  
    If no extension matches (or for `.txt`), falls back to standard Jinja2 delimiters.
-
-Here’s a **Practical Usage** section for your README with real-world examples and copy-paste friendly commands:
 
 ---
 
@@ -203,7 +197,7 @@ python -m jinjagen backup.sh.j2 backup.sh -d config.json -D#
 DB_HOST=#{ db_host }#
 DB_USER=#{ db_user }#
 #% if env == "prod" %#
-DB_PASSWORD=#{ vault.get('db_prod_pass') }#
+DB_PASSWORD=#{ "vault.get('db_prod_pass')" }#
 #% else %#
 DB_PASSWORD=devpass
 #% endif %#
@@ -212,7 +206,7 @@ DB_PASSWORD=devpass
 **Command** (using environment variables):
 
 ```bash
-python -m jinjagen .env.j2 .env -d <(echo '{"env":"prod","db_host":"10.0.0.1","db_user":"admin"}')
+python -m jinjagen .env.j2 .env -D# -d <(echo '{"env":"prod","db_host":"10.0.0.1","db_user":"admin"}')
 ```
 
 ---
