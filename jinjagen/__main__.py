@@ -71,12 +71,12 @@ class Generate(Main):
             if not delimiters:
                 if re.search(
                     r"(?i)\.(c|h|cpp|cxx|cc|hpp|java|kt|scala|js|jsx|ts|tsx|css|scss|sass|php|go|swift|dart|m|mm|groovy|rs|json)$",
-                    input,
+                    output,
                 ):
                     delimiters = "/"
                 elif re.search(
                     r"(?i)\.(py|sh|rb|pl|tcl|lua|r|ps1|yaml|yml|conf|ini|cfg|dockerfile|awk|sed|vim|el|coffee|jl|nim|f|for)$",
-                    input,
+                    output,
                 ):
                     delimiters = "#"
 

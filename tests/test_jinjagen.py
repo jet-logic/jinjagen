@@ -57,7 +57,7 @@ class TestJinjagen(unittest.TestCase):
         data = self.create_temp_file("value: 42", ".yaml")
         output = os.path.join(self.temp_dir.name, "out.yaml")
 
-        result = self.run_command([template, output, "-d", data])
+        result = self.run_command([template, output, "-d", data, "-D."])
 
         with open(output) as f:
             content = f.read()
