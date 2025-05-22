@@ -1,23 +1,17 @@
-from argparse import ArgumentParser
 from jinja2 import Environment
-from .main import Main
+from .main import Main, arg, flag
 
 
 class Generate(Main):
-    def __init__(self):
-        self.output = "-"
-        self.input = "-"
-        self.data = ""
-        self.params = {}
+    delimiters: str = flag("delimiters", "D", "Delimiters style", default="", choices=["#", "/", "."])
+    templates: str = flag("templates", "t", "Template searchpath", default="", metavar="DIR")
+    config_file: str = flag("config", "c", "Config file (YAML/JSON)", default="", metavar="FILE")
+    data_file: str = flag("data", "d", "Data file (YAML/JSON)", default="", metavar="FILE")
+    input: str = arg("Input file", "INPUT", default="-")
+    output: str = arg("Output file", "OUTPUT", default="-", nargs="?")
 
-    def add_arguments(self, argp: ArgumentParser) -> None:
-        argp.add_argument("--input", "-i", help="Input file")
-        argp.add_argument("--output", "-o", help="Output")
-        argp.add_argument("--data", "-d", help="Data file (YAML/JSON)")
-        argp.add_argument("--config", "-c")
-        argp.add_argument("--templates", "-t")
-        argp.add_argument("--delimiters", "-D", help="Delimiters style")
-        return super().add_arguments(argp)
+    def __init__(self):
+        self.params = {}
 
     def setup_delimeters(self, code: str, opt: dict):
         if code == "/":
@@ -35,10 +29,22 @@ class Generate(Main):
             opt["comment_start_string"] = "##"
             opt["comment_end_string"] = "##"
         else:
-            assert not code
+            assert not code or code == "."
+
+    def load_data(self, f: str):
+        if f.endswith(".json"):
+            import json
+
+            with as_source(f, "r") as r:
+                return json.load(r)
+        else:
+            import yaml
+
+            with as_source(f, "r") as r:
+                return yaml.safe_load(r)
 
     def start(self):
-        import yaml, json, re
+        import re
         from jinja2 import FileSystemLoader, Template
 
         kwargs = {
@@ -46,24 +52,13 @@ class Generate(Main):
             "lstrip_blocks": True,
         }
         delimiters = self.delimiters
-
         params = self.params
-        data = self.data
-        if data:
-            if data.endswith(".json"):
-                with as_source(data, "r") as r:
-                    d = json.load(r)
-                    params.update(d)
-                    # pprint.pprint(d, stream=stderr)
-            else:
-                with as_source(data, "r") as r:
-                    d = yaml.safe_load(r)
-                    params.update(d)
-                    # pprint.pprint(d, stream=stderr)
 
-        config = self.config
-        if config:
-            kwargs = yaml.safe_load(config)
+        if self.data_file:
+            params.update(self.load_data(self.data_file))
+
+        if self.config_file:
+            kwargs.update(self.load_data(self.config_file))
 
         templates = self.templates
         if templates:
@@ -101,20 +96,17 @@ class Generate(Main):
             with as_sink(output, "w") as w:
                 w.write(out)
 
-        # print(template.render(config_data))
-
 
 def as_source(path="-", mode="rb"):
-    if path and path != "-":
+    if path != "-":
         return open(path, mode)
-    assert path
     from sys import stdin
 
     return stdin.buffer if "b" in mode else stdin
 
 
 def as_sink(path="-", mode="wb"):
-    if path and path != "-":
+    if path != "-":
         return open(path, mode)
     from sys import stdout
 

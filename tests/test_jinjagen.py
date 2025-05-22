@@ -43,7 +43,7 @@ class TestJinjagen(unittest.TestCase):
         output = os.path.join(self.temp_dir.name, "output.txt")
 
         # Run generation
-        result = self.run_command(["-i", template, "-o", output, "-d", data])
+        result = self.run_command([template, output, "-d", data])
 
         # Verify output
         with open(output) as f:
@@ -57,7 +57,7 @@ class TestJinjagen(unittest.TestCase):
         data = self.create_temp_file("value: 42", ".yaml")
         output = os.path.join(self.temp_dir.name, "out.yaml")
 
-        result = self.run_command(["-i", template, "-o", output, "-d", data])
+        result = self.run_command([template, output, "-d", data])
 
         with open(output) as f:
             content = f.read()
@@ -66,13 +66,11 @@ class TestJinjagen(unittest.TestCase):
 
     # @unittest.skip("Enable when needed")
     def test_auto_delimiters_for_code_files(self):
-        template = self.create_temp_file(
-            "/*{ var }*/\n/*% if true %*/\nint x = 42;\n/*% endif %*/", ".c"
-        )
+        template = self.create_temp_file("/*{ var }*/\n/*% if true %*/\nint x = 42;\n/*% endif %*/", ".c")
         data = self.create_temp_file(json.dumps({"var": "DECLARATION"}), ".json")
         output = os.path.join(self.temp_dir.name, "out.c")
 
-        result = self.run_command(["-i", template, "-o", output, "-d", data])
+        result = self.run_command([template, output, "-d", data])
 
         with open(output) as f:
             content = f.read()
@@ -82,13 +80,11 @@ class TestJinjagen(unittest.TestCase):
 
     # @unittest.skip("Enable when needed")
     def test_explicit_delimiters(self):
-        template = self.create_temp_file(
-            "#{ var }#\n#% if true %#\nx = 42\n#% endif %#", ".py"
-        )
+        template = self.create_temp_file("#{ var }#\n#% if true %#\nx = 42\n#% endif %#", ".py")
         data = self.create_temp_file(json.dumps({"var": "GENERATED"}), ".json")
         output = os.path.join(self.temp_dir.name, "out.py")
 
-        result = self.run_command(["-i", template, "-o", output, "-d", data, "-D", "#"])
+        result = self.run_command([template, output, "-d", data, "-D", "#"])
 
         with open(output) as f:
             content = f.read()
@@ -103,12 +99,10 @@ class TestJinjagen(unittest.TestCase):
         data_file = self.create_temp_file(data_content)
 
         # Use subprocess with pipes
-        cmd = self.python_cmd + ["-d", data_file]
+        cmd = self.python_cmd + ["-d", data_file, "-"]
         print(f"[COMMAND] {' '.join(cmd)} (with stdin pipe)")
 
-        result = subprocess.run(
-            cmd, input=template_content, capture_output=True, text=True
-        )
+        result = subprocess.run(cmd, input=template_content, capture_output=True, text=True)
 
         print(f"[STDOUT]\n{result.stdout}")
         self.assertEqual(result.stdout, "Input: from stdin")
@@ -129,7 +123,7 @@ class TestJinjagen(unittest.TestCase):
 
         output = os.path.join(self.temp_dir.name, "output.txt")
 
-        result = self.run_command(["-i", "base.txt", "-o", output, "-t", templates_dir])
+        result = self.run_command(["base.txt", output, "-t", templates_dir])
 
         with open(output) as f:
             content = f.read()
@@ -142,13 +136,13 @@ class TestJinjagen(unittest.TestCase):
         data = self.create_temp_file("not valid json or yaml", ".txt")
         output = os.path.join(self.temp_dir.name, "out.txt")
 
-        result = self.run_command(["-i", template, "-o", output, "-d", data])
+        result = self.run_command([template, output, "-d", data])
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Error", result.stderr)
 
     # @unittest.skip("Enable when needed")
     def test_missing_input_file(self):
-        result = self.run_command(["-i", "nonexistent.txt"])
+        result = self.run_command(["nonexistent.txt"])
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Error", result.stderr)
 
@@ -157,6 +151,30 @@ class TestJinjagen(unittest.TestCase):
     #     result = self.run_command(["--version"])
     #     self.assertEqual(result.returncode, 0)
     #     self.assertIn("0.0.1", result.stdout)
+
+    # @unittest.skip("Enable when needed")
+    def test_test_extra(self):
+        with tempfile.TemporaryDirectory() as top:
+            tmp = Path(top)
+            input = tmp.joinpath("input.html")
+            data = tmp.joinpath("data.json")
+            config = tmp.joinpath("config.json")
+            input.write_bytes(
+                rb"""
+<div>
+{% if x == 3 %}
+<small>{{ x }}</small>
+{% endif %}
+</div>"""
+            )
+            data.write_bytes(b'{"x":3}')
+            # config.write_bytes(rb'{  "trim_blocks": false,   "lstrip_blocks": false}')
+            config.write_bytes(rb'{  "trim_blocks": true,   "lstrip_blocks": false}')
+            result = self.run_command([str(input), "-", "-d", str(data), "-c", str(config)])
+            self.assertRegex(result.stdout, r"\n<div>\n<small>3</small>\n</div>")
+            config.write_bytes(rb'{  "trim_blocks": false,   "lstrip_blocks": false}')
+            result = self.run_command([str(input), "-", "-d", str(data), "-c", str(config)])
+            self.assertRegex(result.stdout, r"\n<div>\n\n+<small>3</small>\n\n+</div>")
 
 
 if __name__ == "__main__":

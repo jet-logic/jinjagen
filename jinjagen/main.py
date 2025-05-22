@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 if TYPE_CHECKING:
     import argparse
-    from typing import Sequence
+    from typing import Sequence, Generator
 
 INVALID = object()
 
@@ -27,7 +27,6 @@ class Argument:
         const = kwargs.get("const")
         default = kwargs.get("default", INVALID)
         # kind = type(default)
-        # print(name, type_, that, "_add", action, flag_arg)
 
         if action is None:
             if const is not None:
@@ -60,20 +59,24 @@ class Argument:
                 kwargs["action"] = "store"
 
         parser = kwargs.pop("parser", None)
-        if kwargs.get("action", "count"):
+        if kwargs.get("action") == "count":
             pass
         elif parser:
             kwargs["type"] = parser
-        elif type_ is not bool and issubclass(type_, (int, float, str)):
+        elif (
+            type_ is not bool
+            and type(type_) is type
+            and issubclass(type_, (int, float, str))
+        ):
             kwargs["type"] = type_
-
+        # print(name, type_, that, "_add", action, flag_arg)
         if flag_arg is None:
             for x in self.args:
                 if " " in x or "\t" in x:
                     kwargs["help"] = x
                 else:
                     if "metavar" not in kwargs:
-                        kwargs["metavar"] = x
+                        kwargs["metavar"] = x.upper()
             if kwargs.pop("required", None) is False:
                 kwargs["nargs"] = "?"
         else:
@@ -97,7 +100,7 @@ class Argument:
         argp.add_argument(*args, **kwargs)
 
 
-def _arg_fields(inst: object) -> object:
+def _arg_fields(inst: object):
     for c in inst.__class__.__mro__:
         for k, v in tuple(c.__dict__.items()):
             if isinstance(v, Argument):
@@ -142,7 +145,11 @@ class Main:
         args: "Sequence[str]|None" = None,
         argp: "argparse.ArgumentParser|None" = None,
     ):
-        """Main entry point for the command."""
+        """Entry point for CLI execution.
+        Args:
+            args: Command-line arguments (optional).
+            argp: Custom ArgumentParser (optional).
+        """
         if argp is None:
             argp = self.new_argparse()
         self.init_argparse(argp)
@@ -217,5 +224,6 @@ class Main:
         pass
 
     def sub_args(self):
+        # type: (int) -> Generator[tuple[Main|None, dict[str,object]], None, None]
         """Yield subcommands."""
         yield None, {}

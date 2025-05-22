@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+version = {attr = "jinjagen.__init__.__version__"}
+
+[project]
+name = "jinjagen"
+dynamic = ["version"]
+description = ""
+authors = [
+    {name = "Jet-Logic"},
+]
+
+[tool.black]
+line-length = 127
