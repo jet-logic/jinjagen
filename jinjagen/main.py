@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING
 
-__version__ = "0.0.4"
+__version__ = "0.0.7"
 if TYPE_CHECKING:
-    import argparse
-    from typing import Sequence, Generator, Any
+    from argparse import ArgumentParser
+    from typing import Sequence, Generator
 
 INVALID = object()
 
@@ -15,7 +15,7 @@ class Argument:
         self.args = args
         self.kwargs = kwargs
 
-    def _add(self, name: str, type_: type, argp: "argparse.ArgumentParser", that: object) -> None:
+    def _add(self, name: str, klass: type, argp: "ArgumentParser", that: object) -> None:
         """Add argument to parser."""
         args = []
         kwargs = {**self.kwargs}
@@ -23,14 +23,12 @@ class Argument:
         action = kwargs.get("action")
         const = kwargs.get("const")
         default = kwargs.get("default", INVALID)
+        kind = klass if isinstance(klass, type) else type
 
         if action is None:
-
             if const is not None:
-                kwargs["action"] = "append_const" if issubclass(type_, list) or isinstance(default, list) else "store_const"
-            elif type_ is None:
-                kwargs["action"] = "store"
-            elif issubclass(type_, bool):
+                kwargs["action"] = "append_const" if issubclass(kind, list) or isinstance(default, list) else "store_const"
+            elif issubclass(kind, bool):
                 if default is None:
                     try:
                         from argparse import BooleanOptionalAction
@@ -43,7 +41,7 @@ class Argument:
                 else:
                     assert default is INVALID or default is False
                     kwargs["action"] = "store_true"
-            elif issubclass(type_, list) or isinstance(default, list):
+            elif issubclass(kind, list) or isinstance(default, list):
                 if "nargs" not in kwargs:
                     kwargs["action"] = "append"
                 if "default" not in kwargs:
@@ -52,13 +50,13 @@ class Argument:
                 kwargs["action"] = "store"
 
         parser = kwargs.pop("parser", None)
-        if kwargs.get("action") == "count":
+        if kwargs.get("action") in ("count", "store_const"):
             pass
         elif parser:
             kwargs["type"] = parser
-        elif type_ is not bool and type(type_) is type and issubclass(type_, (int, float, str)):
-            kwargs["type"] = type_
-        # print(name, type_, that, "_add", action, flag_arg)
+        elif kind is not bool and issubclass(kind, (int, float, str)):
+            kwargs["type"] = kind
+
         if flag_arg is None:
             for x in self.args:
                 if " " in x or "\t" in x:
@@ -125,11 +123,7 @@ class Main:
         else:
             return m(name)
 
-    def main(
-        self,
-        args: "Sequence[str]|None" = None,
-        argp: "argparse.ArgumentParser|None" = None,
-    ):
+    def main(self, args: "Sequence[str]|None" = None, argp: "ArgumentParser|None" = None):
         """Entry point for CLI execution.
         Args:
             args: Command-line arguments (optional).
@@ -142,17 +136,17 @@ class Main:
         self.parse_arguments(argp, args)
         return self
 
-    def new_argparse(self) -> "argparse.ArgumentParser":
+    def new_argparse(self) -> "ArgumentParser":
         """Create a new argument parser."""
         from argparse import ArgumentParser
 
         return ArgumentParser()
 
-    def init_argparse(self, argp: "argparse.ArgumentParser") -> None:
+    def init_argparse(self, argp: "ArgumentParser") -> None:
         """Initialize the argument parser."""
         pass
 
-    def add_arguments(self, argp: "argparse.ArgumentParser") -> None:
+    def add_arguments(self, argp: "ArgumentParser") -> None:
         """Add arguments to the parser."""
         for k, v, t in _arg_fields(self):
             v._add(k, t, argp, self)
@@ -170,44 +164,30 @@ class Main:
         pass
 
     def sub_args(self):
-        # type: () -> Generator[tuple[Main|None, dict[str,Any]], None, None]
+        # type: () -> Generator[tuple[Main|None, dict[str,object]], None, None]
         """Yield subcommands."""
         yield None, {}
 
-    def parse_arguments(self, argp: "argparse.ArgumentParser", args: "Sequence[str]|None") -> None:
+    def parse_arguments(self, argp: "ArgumentParser", args: "Sequence[str]|None") -> None:
         """Parse command line arguments."""
         p = self._walk_subparsers(argp)
 
         if p:
             self._arg_parent = None
             n = argp.parse_args(args)
-            try:
-                s = self._arg_final = n._arg_final
-            except AttributeError:
-                raise
-            else:
-                m, h, a = n.__dict__, None, s
-                while a:
-                    h = (a, h)
-                    for k, v, t in _arg_fields(a):
-                        if k in m:
-                            setattr(a, k, m[k])
-                    a = getattr(a, "_arg_parent", None)
-                assert h and h[0] is self
-                s._arg_parent_head = h
-                for m in s._arg_parents_and_self():
-                    m.ready()
-                for m in s._arg_parents_and_self():
-                    m.start()
-                for m in s._arg_parents_and_self():
-                    m.done()
+            s = self._arg_final = n._arg_final
+            for k, v in n.__dict__.items():
+                setattr(s, k, v)
+            s.ready()
+            s.start()
+            s.done()
         else:
             argp.parse_args(args, self)
             self.ready()
             self.start()
             self.done()
 
-    def _walk_subparsers(self, argp: "argparse.ArgumentParser", root=None):
+    def _walk_subparsers(self, argp: "ArgumentParser", root=None):
         s = None
         for c, d in self.sub_args():
             if c:
@@ -222,19 +202,18 @@ class Main:
         return s
 
     def _arg_parents_and_self(self):
-        # type: () -> Generator[Main, Any, Any]
-        c = self._arg_parent_head
+        # type: () -> Generator[Main, object, None]
+        c: "Main | None" = self
         while c is not None:
-            d, n = c
-            yield d
-            c = n
+            yield c
+            c = c._arg_parent
 
     def _arg_parents(self):
-        for d in self._arg_parents_and_self():
-            if d is self:
-                break
-            yield d
+        # type: () -> Generator[Main, object, None]
+        c = self._arg_parent
+        while c is not None:
+            yield c
+            c = c._arg_parent
 
     _arg_final: "Main | None"
     _arg_parent: "Main | None"
-    _arg_parent_head: "tuple[Main, tuple] | None"
