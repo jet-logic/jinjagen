@@ -82,8 +82,6 @@ class Generate(Main):
 
             self.setup_delimeters(delimiters, kwargs)
 
-            # print("kwargs:", kwargs)
-            # print("delimiters:", delimiters)
             if templates:
                 env = Environment(**kwargs)
                 template = env.get_template(input)
